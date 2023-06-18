@@ -14,7 +14,7 @@ import {
     ResetData
 } from '../utils/validation/auth';
 import UserModel, { User } from '../models/User';
-import { ErrorObject, Role, UserRole } from '../utils/constants';
+import { ErrorObject } from '../utils/constants';
 import { returnError } from '../utils/returnError';
 import { sendTokenResponse } from '../utils/sendTokenResponse';
 import { protect } from '../utils/auth';
@@ -36,7 +36,7 @@ export class AuthController {
                 });
             }
     
-            let user = await UserModel.findOne({ email }).select('+password');
+            let user = await UserModel.findOne({ email });
     
             if (!user) {
                 return res.status(401).json({
@@ -48,7 +48,7 @@ export class AuthController {
             }
     
             // Check if password matches
-            const isMatch = await user.matchPassword(req.body.password);
+            const isMatch = user.matchPassword(req.body.password);
     
             if (!isMatch) {
                 return res.status(401).json({
@@ -59,7 +59,7 @@ export class AuthController {
                 });
             }
     
-            user.password = ''; // Remove password from user before sending response
+            // user.password = ''; // Remove password from user before sending response
     
             const data = { user };
             return sendTokenResponse(data, 200, 'Login successful', res);
@@ -124,29 +124,6 @@ export class AuthController {
         }
     }
 
-    // Assign role to user
-    @patch('/assignRole/:id')
-    @use(protect)
-    async assignRole(req: Request, res: Response) {
-        try {    
-            if (!(req.body.role.toUpperCase() in Role)) {
-                return res.status(400).json({
-                    success: false,
-                    errors: { msg: 'Invalid user role!' as UserRole}
-                });
-            }
-            const user = await UserModel.findByIdAndUpdate(req.params.id, { $set: { role: req.body.role } }, { new: true });
-
-            return res.status(200).json({
-                success: true,
-                msg: 'Role updated successfully',
-                data: user
-            });
-        } catch(err) {
-            return returnError(err, res, 500, 'Password could not be changed');
-        }
-    }
-
     // Change user password
     @patch('/changePassword')
     @use(protect)
@@ -173,7 +150,7 @@ export class AuthController {
                 });
             }
     
-            if (!(await user.matchPassword(currentPassword))) {
+            if (!(user.matchPassword(currentPassword))) {
                 return res.status(401).json({
                     success: false,
                     errors: {
@@ -183,7 +160,7 @@ export class AuthController {
                 });
             }
     
-            if (await user.matchPassword(newPassword)) {
+            if (user.matchPassword(newPassword)) {
                 return res.status(401).json({
                     success: false,
                     errors: {
@@ -219,12 +196,11 @@ export class AuthController {
 
             const user = await UserModel.findOne({ email: email.toLowerCase() });
             if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    errors: {
-                        msg: 'User does not exist!',
-                        email: 'User does not exist!'
-                    }
+                // Send 200 response even when user does not exist
+                return res.status(200).json({
+                    success: true,
+                    msg: `We sent a password reset link to ${email}`,
+                    data: { }
                 });
             }
 
@@ -255,7 +231,6 @@ export class AuthController {
                 msg: `We sent a password reset link to ${email}`,
                 data: { }
             });
-    
 
         } catch (err) {
             return returnError(err, res, 500, 'Unable to send password reset email');

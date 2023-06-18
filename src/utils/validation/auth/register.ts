@@ -38,6 +38,9 @@ export const validateRegisterUser = (data: User): ErrorObject<User> => {
     if (Validator.isEmpty(data.confirmPassword!)) {
         errors.confirmPassword = 'Confirm your password!';
     }
+    if (data.confirmPassword !== data.password) {
+        errors.confirmPassword = 'Passwords do not match!';
+    }
 
     if (!(data.role.toUpperCase() in Role)) {
         errors.role = `Invalid user role '${data.role}'!` as UserRole;
